@@ -78,7 +78,7 @@ namespace ui {
         if (isRendering) return;
         isRendering = true;
 
-        scene.createRenderable(90, function (target: Image, camera: Camera) {
+        scene.createRenderable(90, function (target: Image, camera: scene.Camera) {
             // Group indices to track offsets
             let tlX = 2;
             let trX = 158;
