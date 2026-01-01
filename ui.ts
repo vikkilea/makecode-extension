@@ -46,9 +46,9 @@ namespace ui {
      * Create a special variable that triggers code when it changes.
      */
     //% block="create observable string $initialValue"
-    //% blockId=ui_create_observable
+    //% blockId=ui_create_observable_string
     //% group="Variables"
-    export function createObservableValue(initialValue: string): ObservableValue {
+    export function createObservableString(initialValue: string): ObservableValue {
         return new ObservableValue(initialValue);
     }
 
@@ -75,12 +75,24 @@ namespace ui {
     }
 
     /**
-     * Set the value of an observable.
+     * Set the string value of an observable.
      */
-    //% block="set $observable value to $v"
+    //% block="set $observable string value to $v"
     //% observable.shadow=variables_get
+    //% v.defl=""
     //% group="Variables"
-    export function setObservable(observable: ObservableValue, v: any) {
+    export function setObservableString(observable: ObservableValue, v: string) {
+        observable.value = v;
+    }
+
+    /**
+     * Set the number value of an observable.
+     */
+    //% block="set $observable number value to $v"
+    //% observable.shadow=variables_get
+    //% v.defl=0
+    //% group="Variables"
+    export function setObservableNumber(observable: ObservableValue, v: number) {
         observable.value = v;
     }
 
@@ -98,13 +110,23 @@ namespace ui {
     }
 
     /**
-     * Get the current value of an observable.
+     * Get the current value of an observable as a number.
      */
-    //% block="get value of $observable"
+    //% block="get number value of $observable"
     //% observable.shadow=variables_get
     //% group="Variables"
-    export function getObservableValue(observable: ObservableValue): number {
+    export function getObservableNumber(observable: ObservableValue): number {
         return Number(observable.value);
+    }
+
+    /**
+     * Get the current value of an observable as a string.
+     */
+    //% block="get string value of $observable"
+    //% observable.shadow=variables_get
+    //% group="Variables"
+    export function getObservableString(observable: ObservableValue): string {
+        return "" + observable.value;
     }
 
     class UIItem {
