@@ -15,18 +15,78 @@ namespace ui {
         BottomRight = 3
     }
 
+    // ---------------------------------------------------------------------
+    // Observable values (Variable binding)
+    // ---------------------------------------------------------------------
+
+    export class ObservableValue {
+        private _value: string;
+        public onChange: events.Signal<string>;
+
+        constructor(initialValue: string) {
+            this._value = initialValue;
+            this.onChange = new events.Signal<string>();
+        }
+
+        get value(): string {
+            return this._value;
+        }
+
+        set value(v: string) {
+            if (this._value !== v) {
+                this._value = v;
+                if (this.onChange.hasListeners()) {
+                    this.onChange.dispatch(v);
+                }
+            }
+        }
+    }
+
+    /**
+     * Create a special variable that triggers code when it changes.
+     */
+    //% block="create observable value $initialValue"
+    //% blockId=ui_create_observable
+    //% group="Variables"
+    export function createObservableValue(initialValue: string): ObservableValue {
+        return new ObservableValue(initialValue);
+    }
+
+    /**
+     * Run code when an observable value changes.
+     */
+    //% block="on $observable change to $v"
+    //% observable.shadow=variables_get
+    //% draggableParameters="reporter"
+    //% group="Variables"
+    export function onObservableChange(observable: ObservableValue, handler: (v: string) => void) {
+        observable.onChange.add(handler);
+    }
+
+    /**
+     * Set the value of an observable.
+     */
+    //% block="set $observable value to $v"
+    //% observable.shadow=variables_get
+    //% group="Variables"
+    export function setObservable(observable: ObservableValue, v: string) {
+        observable.value = v;
+    }
+
     class UIItem {
         id: string;
         icon: Image;
         value: string;
+        observable?: ObservableValue;
         bgColor: number;
         corner: Corner;
         color: number;
 
-        constructor(id: string, icon: Image, value: string, corner: Corner, bgColor: number, color: number) {
+        constructor(id: string, icon: Image, value: string, corner: Corner, bgColor: number, color: number, observable?: ObservableValue) {
             this.id = id;
             this.icon = icon;
             this.value = value;
+            this.observable = observable;
             this.bgColor = bgColor;
             this.corner = corner;
             this.color = color;
@@ -59,6 +119,30 @@ namespace ui {
     }
 
     /**
+     * Add a UI element that automatically updates when the observable value changes.
+     */
+    //% block="add live UI item $icon bound to $observable at $corner || bg $bgColor text $color"
+    //% icon.shadow=screen_image_picker
+    //% observable.shadow=variables_get
+    //% bgColor.shadow=colorindexpicker
+    //% bgColor.defl=15
+    //% color.shadow=colorindexpicker
+    //% color.defl=1
+    //% group="HUD"
+    export function addLive(icon: Image, observable: ObservableValue, corner: Corner, bgColor: number = 15, color: number = 1) {
+        const id = Math.randomRange(0, 999999).toString();
+        const item = new UIItem(id, icon, observable.value, corner, bgColor, color, observable);
+
+        // Auto-update
+        observable.onChange.add((v) => {
+            item.value = v;
+        });
+
+        items.push(item);
+        startRenderLoop();
+    }
+
+    /**
      * Update the value of a UI element
      */
     //% block="update UI item $id to $value"
@@ -68,6 +152,8 @@ namespace ui {
     export function updateValue(id: string, value: string) {
         for (const item of items) {
             if (item.id === id) {
+                // If it's bound to an observable, updating it manually might be overwritten,
+                // but we allow it.
                 item.value = value;
                 return;
             }
