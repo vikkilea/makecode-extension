@@ -85,7 +85,8 @@ namespace tiles {
     //% block="highlight tile at col $col row $row when kind $kind touches it with $highlight"
     //% col.min=0 col.max=15
     //% row.min=0 row.max=15
-    //% highlight.shadow=screen_image_picker
+    //% kind.shadow=spritekind
+    //% highlight.shadow=tileset_tile_picker
     //% group="Tile Interaction"
     export function setTileHighlight(col: number, row: number, kind: number, highlight: Image) {
         const key = `${col},${row}`;
