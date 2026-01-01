@@ -1,25 +1,5 @@
 //% color="#d48c26" weight=90 icon="\uf279"
 namespace tiles {
-    export class TilePoint {
-        col: number;
-        row: number;
-        constructor(col: number, row: number) {
-            this.col = col;
-            this.row = row;
-        }
-    }
-
-    /**
-     * Create a reusable tile point coordinate
-     */
-    //% block="tile point col $col row $row"
-    //% blockId=tiles_create_tile_point
-    //% group="Locations"
-    //% weight=100
-    export function createTilePoint(col: number, row: number): TilePoint {
-        return new TilePoint(col, row);
-    }
-
     // ---------------------------------------------------------------------
     // Movement helpers
     // ---------------------------------------------------------------------
@@ -27,14 +7,14 @@ namespace tiles {
      * Move a sprite to a specific tile location at a given speed.
      * Straight‑line movement; no path‑finding.
      */
-    //% block="move $sprite to $pt at speed $speed"
+    //% block="move $sprite to $location at speed $speed"
     //% sprite.shadow=variables_get
     //% sprite.defl=mySprite
-    //% pt.shadow=tiles_create_tile_point
+    //% location.shadow=mapgettile
     //% group="Movement"
-    export function moveSpriteToTile(sprite: Sprite, pt: TilePoint, speed: number) {
-        const col = pt.col;
-        const row = pt.row;
+    export function moveSpriteToTile(sprite: Sprite, location: tiles.Location, speed: number) {
+        const col = location.col;
+        const row = location.row;
         const tileSize = 16; // default tile size in Arcade
         const targetX = col * tileSize + tileSize / 2;
         const targetY = row * tileSize + tileSize / 2;
@@ -64,14 +44,14 @@ namespace tiles {
     /**
      * Teleport a sprite directly to a tile.
      */
-    //% block="teleport $sprite to $pt"
+    //% block="teleport $sprite to $location"
     //% sprite.shadow=variables_get
     //% sprite.defl=mySprite
-    //% pt.shadow=tiles_create_tile_point
+    //% location.shadow=mapgettile
     //% group="Movement"
-    export function teleportToTile(sprite: Sprite, pt: TilePoint) {
-        const col = pt.col;
-        const row = pt.row;
+    export function teleportToTile(sprite: Sprite, location: tiles.Location) {
+        const col = location.col;
+        const row = location.row;
         const tileSize = 16;
         const x = col * tileSize + tileSize / 2;
         const y = row * tileSize + tileSize / 2;
@@ -99,14 +79,14 @@ namespace tiles {
      * Register a tile to change its sprite when a sprite of the given kind touches it.
      * The tile at the point will show `highlight` while any sprite of that kind is on it.
      */
-    //% block="highlight tile at $pt when kind $kind touches it with $highlight"
+    //% block="highlight tile at $location when kind $kind touches it with $highlight"
     //% kind.shadow=spritekind
     //% highlight.shadow=tileset_tile_picker
-    //% pt.shadow=tiles_create_tile_point
+    //% location.shadow=mapgettile
     //% group="Tile Interaction"
-    export function setTileHighlight(pt: TilePoint, kind: number, highlight: Image) {
-        const col = pt.col;
-        const row = pt.row;
+    export function setTileHighlight(location: tiles.Location, kind: number, highlight: Image) {
+        const col = location.col;
+        const row = location.row;
         const key = `${col},${row}`;
         const loc = tiles.getTileLocation(col, row);
         const original = tiles.getTileImage(loc);
@@ -116,13 +96,13 @@ namespace tiles {
     /**
      * Check if any sprite of the given kind is currently on the tile at the point.
      */
-    //% block="is kind $kind on tile $pt"
+    //% block="is kind $kind on tile $location"
     //% kind.shadow=spritekind
-    //% pt.shadow=tiles_create_tile_point
+    //% location.shadow=mapgettile
     //% group="Tile Interaction"
-    export function isKindOnTile(kind: number, pt: TilePoint): boolean {
-        const col = pt.col;
-        const row = pt.row;
+    export function isKindOnTile(kind: number, location: tiles.Location): boolean {
+        const col = location.col;
+        const row = location.row;
         const spritesOfKind = sprites.allOfKind(kind);
         const targetLoc = tiles.getTileLocation(col, row);
         for (const s of spritesOfKind) {
@@ -150,10 +130,9 @@ namespace tiles {
                 const row = parseInt(rStr);
 
                 // Check using tmp point
-                const pt = new TilePoint(col, row);
-                const anyOnTile = isKindOnTile(rec.kind, pt);
-
                 const loc = tiles.getTileLocation(col, row);
+                const anyOnTile = isKindOnTile(rec.kind, loc);
+
                 if (anyOnTile && !rec.active) {
                     tiles.setTileAt(loc, rec.highlight);
                     rec.active = true;
