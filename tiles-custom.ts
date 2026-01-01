@@ -105,7 +105,7 @@ namespace tiles {
         const spritesOfKind = sprites.allOfKind(kind);
         const targetLoc = tiles.getTileLocation(col, row);
         for (const s of spritesOfKind) {
-            if (tiles.locationOfSprite(s).equals(targetLoc)) {
+            if (s.tilemapLocation().equals(targetLoc)) {
                 return true;
             }
         }
@@ -142,10 +142,10 @@ namespace tiles {
                 const anyOnTile = isKindOnTile(rec.kind, col, row);
                 const loc = tiles.getTileLocation(col, row);
                 if (anyOnTile && !rec.active) {
-                    tiles.setTileImage(loc, rec.highlight);
+                    tiles.setTileAt(loc, rec.highlight);
                     rec.active = true;
                 } else if (!anyOnTile && rec.active) {
-                    tiles.setTileImage(loc, rec.original);
+                    tiles.setTileAt(loc, rec.original);
                     rec.active = false;
                 }
             }
@@ -154,7 +154,7 @@ namespace tiles {
         controller.A.onEvent(ControllerButtonEvent.Pressed, () => {
             const players = sprites.allOfKind(SpriteKind.Player);
             if (players.length === 0) return;
-            const playerLoc = tiles.locationOfSprite(players[0]);
+            const playerLoc = players[0].tilemapLocation();
             const key = `${playerLoc.column},${playerLoc.row}`;
             const fn = pressMap[key];
             if (fn) fn(playerLoc);
