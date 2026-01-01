@@ -3,6 +3,55 @@ namespace tiles {
     // ---------------------------------------------------------------------
     // Movement helpers
     // ---------------------------------------------------------------------
+
+    interface MoveState {
+        sprite: Sprite;
+        targetX: number;
+        targetY: number;
+        speed: number;
+        prevDist: number;
+    }
+
+    const activeMovers: MoveState[] = [];
+    let moveLoopStarted = false;
+
+    function ensureMoveLoop() {
+        if (moveLoopStarted) return;
+        moveLoopStarted = true;
+        game.onUpdate(() => {
+            for (let i = activeMovers.length - 1; i >= 0; i--) {
+                const mover = activeMovers[i];
+                const s = mover.sprite;
+
+                // If sprite destroyed, remove from movers
+                if (s.flags & sprites.Flag.Destroyed) {
+                    activeMovers.splice(i, 1);
+                    continue;
+                }
+
+                const dx = mover.targetX - s.x;
+                const dy = mover.targetY - s.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                // Stop conditions:
+                // 1. We are very close (less than 2px)
+                // 2. We moved further away than last frame (overshoot)
+                if (dist < 2 || dist > mover.prevDist) {
+                    s.setVelocity(0, 0);
+                    s.setPosition(mover.targetX, mover.targetY);
+                    activeMovers.splice(i, 1);
+                } else {
+                    mover.prevDist = dist;
+                    // Re-assert velocity in case something else changed it 
+                    // or if physics needs a nudge, though usually setVelocity once is enough. 
+                    // However, calculating exact frame movement is better.
+                    const ratio = mover.speed / dist;
+                    s.setVelocity(dx * ratio, dy * ratio);
+                }
+            }
+        });
+    }
+
     /**
      * Move a sprite to a specific tile location at a given speed.
      * Straight‑line movement; no path‑finding.
@@ -15,30 +64,40 @@ namespace tiles {
     export function moveSpriteToTile(sprite: Sprite, location: tiles.Location, speed: number) {
         const col = location.col;
         const row = location.row;
-        const tileSize = 16; // default tile size in Arcade
+        const tileSize = 16;
         const targetX = col * tileSize + tileSize / 2;
         const targetY = row * tileSize + tileSize / 2;
+
         const dx = targetX - sprite.x;
         const dy = targetY - sprite.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
+
+        // Remove any existing mover for this sprite
+        for (let i = activeMovers.length - 1; i >= 0; i--) {
+            if (activeMovers[i].sprite === sprite) {
+                activeMovers.splice(i, 1);
+            }
+        }
+
         if (dist < 2) {
             sprite.setVelocity(0, 0);
             sprite.setPosition(targetX, targetY);
             return;
         }
+
+        activeMovers.push({
+            sprite: sprite,
+            targetX: targetX,
+            targetY: targetY,
+            speed: speed,
+            prevDist: dist + 1 // Ensure we don't trigger overshoot on first frame
+        });
+
+        // Set initial velocity
         const ratio = speed / dist;
         sprite.setVelocity(dx * ratio, dy * ratio);
-        const handler = () => {
-            const curDx = targetX - sprite.x;
-            const curDy = targetY - sprite.y;
-            const curDist = Math.sqrt(curDx * curDx + curDy * curDy);
-            if (curDist < speed / 30) {
-                sprite.setVelocity(0, 0);
-                sprite.setPosition(targetX, targetY);
-                game.removeScenePushHandler(handler);
-            }
-        };
-        game.addScenePushHandler(handler);
+
+        ensureMoveLoop();
     }
 
     /**
