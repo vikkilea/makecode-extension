@@ -62,7 +62,7 @@ namespace tiles {
     //% location.shadow=mapgettile
     //% group="Movement"
     export function moveSpriteToTile(sprite: Sprite, location: tiles.Location, speed: number) {
-        const col = location.col;
+        const col = location.column;
         const row = location.row;
         const tileSize = 16;
         const targetX = col * tileSize + tileSize / 2;
@@ -109,7 +109,7 @@ namespace tiles {
     //% location.shadow=mapgettile
     //% group="Movement"
     export function teleportToTile(sprite: Sprite, location: tiles.Location) {
-        const col = location.col;
+        const col = location.column;
         const row = location.row;
         const tileSize = 16;
         const x = col * tileSize + tileSize / 2;
@@ -144,7 +144,7 @@ namespace tiles {
     //% location.shadow=mapgettile
     //% group="Tile Interaction"
     export function setTileHighlight(location: tiles.Location, kind: number, highlight: Image) {
-        const col = location.col;
+        const col = location.column;
         const row = location.row;
         const key = `${col},${row}`;
         const loc = tiles.getTileLocation(col, row);
@@ -160,7 +160,7 @@ namespace tiles {
     //% location.shadow=mapgettile
     //% group="Tile Interaction"
     export function isKindOnTile(kind: number, location: tiles.Location): boolean {
-        const col = location.col;
+        const col = location.column;
         const row = location.row;
         const spritesOfKind = sprites.allOfKind(kind);
         const targetLoc = tiles.getTileLocation(col, row);
@@ -171,6 +171,120 @@ namespace tiles {
             }
         }
         return false;
+    }
+
+    // ---------------------------------------------------------------------
+    // Generic Tile Entry/Exit Events (Observer Pattern)
+    // ---------------------------------------------------------------------
+
+    // Key: "kind,col,row" -> { enter: Signal, exit: Signal }
+    interface TileSignals {
+        enter: events.Signal<Sprite>;
+        exit: events.Signal<Sprite>;
+    }
+
+    const signalMap: { [key: string]: TileSignals } = {};
+    const monitoredKinds: number[] = [];
+
+    function getTileSignalKey(kind: number, col: number, row: number) {
+        return `${kind},${col},${row}`;
+    }
+
+    function getTileSignals(kind: number, col: number, row: number): TileSignals {
+        const key = getTileSignalKey(kind, col, row);
+        if (!signalMap[key]) {
+            signalMap[key] = {
+                enter: new events.Signal<Sprite>(),
+                exit: new events.Signal<Sprite>()
+            };
+        }
+        return signalMap[key];
+    }
+
+    function registerTrackedKind(kind: number) {
+        if (monitoredKinds.indexOf(kind) < 0) {
+            monitoredKinds.push(kind);
+        }
+    }
+
+    /**
+     * Run code when a sprite of a specific kind enters a specific tile location.
+     */
+    //% block="on sprite of kind $kind enters tile $location"
+    //% kind.shadow=spritekind
+    //% location.shadow=mapgettile
+    //% draggableParameters="reporter"
+    //% group="Tile Events"
+    export function onSpriteEnter(kind: number, location: tiles.Location, handler: (sprite: Sprite) => void) {
+        const signals = getTileSignals(kind, location.column, location.row);
+        signals.enter.add(handler);
+        registerTrackedKind(kind);
+        ensureEventLoop();
+    }
+
+    /**
+     * Run code when a sprite of a specific kind leaves a specific tile location.
+     */
+    //% block="on sprite of kind $kind exits tile $location"
+    //% kind.shadow=spritekind
+    //% location.shadow=mapgettile
+    //% draggableParameters="reporter"
+    //% group="Tile Events"
+    export function onSpriteExit(kind: number, location: tiles.Location, handler: (sprite: Sprite) => void) {
+        const signals = getTileSignals(kind, location.column, location.row);
+        signals.exit.add(handler);
+        registerTrackedKind(kind);
+        ensureEventLoop();
+    }
+
+    const TILE_PREV_COL_KEY = "prev_tile_col";
+    const TILE_PREV_ROW_KEY = "prev_tile_row";
+
+    let eventLoopStarted = false;
+    function ensureEventLoop() {
+        if (eventLoopStarted) return;
+        eventLoopStarted = true;
+
+        game.onUpdate(function () {
+            for (const kind of monitoredKinds) {
+                const spritesOfKind = sprites.allOfKind(kind);
+                for (const sprite of spritesOfKind) {
+                    const loc = sprite.tilemapLocation();
+
+                    // Retrieve last known position
+                    const lastCol = sprites.readDataNumber(sprite, TILE_PREV_COL_KEY);
+                    const lastRow = sprites.readDataNumber(sprite, TILE_PREV_ROW_KEY);
+
+                    // If first run for this sprite, just init data and skip
+                    if (isNaN(lastCol)) {
+                        sprites.setDataNumber(sprite, TILE_PREV_COL_KEY, loc.column);
+                        sprites.setDataNumber(sprite, TILE_PREV_ROW_KEY, loc.row);
+                        continue;
+                    }
+
+                    // Check for change
+                    if (lastCol !== loc.column || lastRow !== loc.row) {
+                        // EXIT old tile
+                        const oldKey = getTileSignalKey(kind, lastCol, lastRow);
+                        const oldSignals = signalMap[oldKey];
+                        if (oldSignals && oldSignals.exit.hasListeners()) {
+                            oldSignals.exit.dispatch(sprite);
+                        }
+
+                        // ENTER new tile
+                        const newKey = getTileSignalKey(kind, loc.column, loc.row);
+                        const newSignals = signalMap[newKey];
+                        if (newSignals && newSignals.enter.hasListeners()) {
+                            newSignals.enter.dispatch(sprite);
+                        }
+
+                        // Update data
+                        sprites.setDataNumber(sprite, TILE_PREV_COL_KEY, loc.column);
+                        sprites.setDataNumber(sprite, TILE_PREV_ROW_KEY, loc.row);
+                    }
+                }
+            }
+        });
     }
 
     // ---------------------------------------------------------------------
