@@ -1,0 +1,6 @@
+
+built
+node_modules
+yotta_modules
+pxt_modules
+*.local
