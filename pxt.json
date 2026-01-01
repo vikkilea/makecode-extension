@@ -3,8 +3,13 @@
     "version": "0.0.1",
     "description": "A MakeCode Arcade extension",
     "files": [
-        "README.md",
-        "main.ts"
+        "files": [
+            "README.md",
+            "behaviors.ts",
+            "tiles-custom.ts",
+            "character-anim.ts",
+            "main.ts"
+        ],
     ],
     "testFiles": [
         "test.ts"
