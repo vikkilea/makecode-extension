@@ -108,17 +108,17 @@ namespace character {
         set.anims[Facing.NorthWest] = northWest;
         set.anims[Facing.Idle] = idle;
 
-        sprites.setDataAny(sprite, ANIM_KEY, set);
+        sprites.setDataSprite(sprite, ANIM_KEY, set as any);
 
         // Register sprite for updates if not already registered
-        let registered: Sprite[] = sprites.readDataAny(game.currentScene(), "char_anim_registry");
+        let registered: Sprite[] = sprites.readDataSprite(game.currentScene(), "char_anim_registry") as any;
         if (!registered) {
             registered = [];
-            sprites.setDataAny(game.currentScene(), "char_anim_registry", registered);
+            sprites.setDataSprite(game.currentScene(), "char_anim_registry", registered as any);
 
             // Start the loop only once
             game.onUpdate(function () {
-                const reg: Sprite[] = sprites.readDataAny(game.currentScene(), "char_anim_registry");
+                const reg: Sprite[] = sprites.readDataSprite(game.currentScene(), "char_anim_registry") as any;
                 if (!reg) return;
 
                 // Cleanup destroyed sprites lazily
@@ -129,7 +129,7 @@ namespace character {
                 }
 
                 for (const sprite of reg) {
-                    const animSet = sprites.readDataAny(sprite, ANIM_KEY) as AnimSet;
+                    const animSet = sprites.readDataSprite(sprite, ANIM_KEY) as any as AnimSet;
                     if (!animSet) continue;
 
                     const vx = sprite.vx;
