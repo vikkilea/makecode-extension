@@ -20,19 +20,19 @@ namespace ui {
     // ---------------------------------------------------------------------
 
     export class ObservableValue {
-        private _value: string;
-        public onChange: events.Signal<string>;
+        private _value: any;
+        public onChange: events.Signal<any>;
 
-        constructor(initialValue: string) {
+        constructor(initialValue: any) {
             this._value = initialValue;
-            this.onChange = new events.Signal<string>();
+            this.onChange = new events.Signal<any>();
         }
 
-        get value(): string {
+        get value(): any {
             return this._value;
         }
 
-        set value(v: string) {
+        set value(v: any) {
             if (this._value !== v) {
                 this._value = v;
                 if (this.onChange.hasListeners()) {
@@ -45,10 +45,21 @@ namespace ui {
     /**
      * Create a special variable that triggers code when it changes.
      */
-    //% block="create observable value $initialValue"
+    //% block="create observable string $initialValue"
     //% blockId=ui_create_observable
     //% group="Variables"
     export function createObservableValue(initialValue: string): ObservableValue {
+        return new ObservableValue(initialValue);
+    }
+
+    /**
+     * Create a special variable that triggers code when it changes.
+     */
+    //% block="create observable number $initialValue"
+    //% initialValue.defl=0
+    //% blockId=ui_create_observable_number
+    //% group="Variables"
+    export function createObservableNumber(initialValue: number): ObservableValue {
         return new ObservableValue(initialValue);
     }
 
@@ -59,7 +70,7 @@ namespace ui {
     //% observable.shadow=variables_get
     //% draggableParameters="reporter"
     //% group="Variables"
-    export function onObservableChange(observable: ObservableValue, handler: (v: string) => void) {
+    export function onObservableChange(observable: ObservableValue, handler: (v: any) => void) {
         observable.onChange.add(handler);
     }
 
@@ -69,8 +80,31 @@ namespace ui {
     //% block="set $observable value to $v"
     //% observable.shadow=variables_get
     //% group="Variables"
-    export function setObservable(observable: ObservableValue, v: string) {
+    export function setObservable(observable: ObservableValue, v: any) {
         observable.value = v;
+    }
+
+    /**
+     * Change the value of an observable number by an amount.
+     */
+    //% block="change $observable by $amount"
+    //% observable.shadow=variables_get
+    //% amount.defl=1
+    //% group="Variables"
+    export function changeObservableValueBy(observable: ObservableValue, amount: number) {
+        if (typeof observable.value === "number") {
+            observable.value = (observable.value as number) + amount;
+        }
+    }
+
+    /**
+     * Get the current value of an observable.
+     */
+    //% block="get value of $observable"
+    //% observable.shadow=variables_get
+    //% group="Variables"
+    export function getObservableValue(observable: ObservableValue): number {
+        return Number(observable.value);
     }
 
     class UIItem {
@@ -78,6 +112,7 @@ namespace ui {
         icon: Image;
         value: string;
         observable?: ObservableValue;
+        changeHandler?: (v: any) => void;
         bgColor: number;
         corner: Corner;
         color: number;
@@ -134,12 +169,43 @@ namespace ui {
         const item = new UIItem(id, icon, observable.value, corner, bgColor, color, observable);
 
         // Auto-update
-        observable.onChange.add((v) => {
+        const handler = (v: string) => {
             item.value = v;
-        });
+        };
+        item.changeHandler = handler;
+        observable.onChange.add(handler);
 
         items.push(item);
         startRenderLoop();
+    }
+
+    /**
+     * Bind an existing UI item to an observable value.
+     */
+    //% block="bind UI item $id to $observable"
+    //% id.shadow=variables_get
+    //% observable.shadow=variables_get
+    //% group="HUD"
+    export function bindToObservable(id: string, observable: ObservableValue) {
+        for (const item of items) {
+            if (item.id === id) {
+                // Cleanup old subscription
+                if (item.observable && item.changeHandler) {
+                    item.observable.onChange.remove(item.changeHandler);
+                }
+
+                // Setup new subscription
+                item.observable = observable;
+                item.value = observable.value; // Sync immediately
+
+                const handler = (v: string) => {
+                    item.value = v;
+                };
+                item.changeHandler = handler;
+                observable.onChange.add(handler);
+                return;
+            }
+        }
     }
 
     /**
