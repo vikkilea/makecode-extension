@@ -71,6 +71,10 @@ namespace character {
         initCharacter(sprite, idle, n, w, sw, nw, interval);
     }
 
+    // Registry to track animated characters
+    const registeredSprites: Sprite[] = [];
+    let isLoopRunning = false;
+
     function initCharacter(sprite: Sprite, idle: Image[], n: Image[], w: Image[], sw: Image[], nw: Image[], interval: number) {
         const set = new AnimSet();
         set.interval = interval;
@@ -110,25 +114,22 @@ namespace character {
 
         sprites.setDataSprite(sprite, ANIM_KEY, set as any);
 
-        // Register sprite for updates if not already registered
-        let registered: Sprite[] = sprites.readDataSprite(game.currentScene(), "char_anim_registry") as any;
-        if (!registered) {
-            registered = [];
-            sprites.setDataSprite(game.currentScene(), "char_anim_registry", registered as any);
+        if (registeredSprites.indexOf(sprite) < 0) {
+            registeredSprites.push(sprite);
+        }
 
-            // Start the loop only once
+        if (!isLoopRunning) {
+            isLoopRunning = true;
             game.onUpdate(function () {
-                const reg: Sprite[] = sprites.readDataSprite(game.currentScene(), "char_anim_registry") as any;
-                if (!reg) return;
-
                 // Cleanup destroyed sprites lazily
-                for (let i = reg.length - 1; i >= 0; i--) {
-                    if (reg[i].flags & sprites.Flag.Destroyed) {
-                        reg.splice(i, 1);
+                for (let i = registeredSprites.length - 1; i >= 0; i--) {
+                    const s = registeredSprites[i];
+                    if (s.flags & sprites.Flag.Destroyed) {
+                        registeredSprites.splice(i, 1);
                     }
                 }
 
-                for (const sprite of reg) {
+                for (const sprite of registeredSprites) {
                     const animSet = sprites.readDataSprite(sprite, ANIM_KEY) as any as AnimSet;
                     if (!animSet) continue;
 
@@ -163,10 +164,6 @@ namespace character {
                     }
                 }
             });
-        }
-
-        if (registered.indexOf(sprite) < 0) {
-            registered.push(sprite);
         }
     }
 
