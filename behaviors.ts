@@ -7,14 +7,12 @@ namespace behaviors {
     const STATE_KEY = "behaviours_state";
     const LAST_STATE_KEY = "behaviours_last_state";
 
-    type Handler = (sprite: Sprite) => void;
-
     interface BehaviorDef {
         kind: number;
         state: string;
-        update?: Handler;
-        enter?: Handler;
-        exit?: Handler;
+        update: events.Signal<Sprite>;
+        enter: events.Signal<Sprite>;
+        exit: events.Signal<Sprite>;
     }
 
     const behaviors: BehaviorDef[] = [];
@@ -97,14 +95,20 @@ namespace behaviors {
         return null;
     }
 
-    function register(kind: number, state: string, type: "enter" | "update" | "exit", handler: Handler) {
+    function register(kind: number, state: string, type: "enter" | "update" | "exit", handler: (sprite: Sprite) => void) {
         let def = getBehavior(kind, state);
         if (!def) {
-            def = { kind, state };
+            def = {
+                kind,
+                state,
+                enter: new events.Signal<Sprite>(),
+                update: new events.Signal<Sprite>(),
+                exit: new events.Signal<Sprite>()
+            };
             behaviors.push(def);
         }
 
-        def[type] = handler;
+        def[type].add(handler);
 
         if (registeredKinds.indexOf(kind) < 0) {
             registeredKinds.push(kind);
@@ -114,8 +118,10 @@ namespace behaviors {
     function trigger(sprite: Sprite, state: string, type: "enter" | "exit") {
         const def = getBehavior(sprite.kind(), state);
         if (def) {
-            const handler = type === "enter" ? def.enter : def.exit;
-            if (handler) handler(sprite);
+            const signal = type === "enter" ? def.enter : def.exit;
+            if (signal.hasListeners()) {
+                signal.dispatch(sprite);
+            }
         }
     }
 
@@ -128,8 +134,8 @@ namespace behaviors {
                 if (!currentState) continue;
 
                 const def = getBehavior(kind, currentState);
-                if (def && def.update) {
-                    def.update(sprite);
+                if (def && def.update.hasListeners()) {
+                    def.update.dispatch(sprite);
                 }
             }
         }
