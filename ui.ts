@@ -116,7 +116,7 @@ namespace ui {
     //% observable.shadow=variables_get
     //% group="Variables"
     export function getObservableNumber(observable: ObservableValue): number {
-        return Number(observable.value);
+        return parseFloat("" + observable.value);
     }
 
     /**
