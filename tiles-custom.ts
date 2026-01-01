@@ -105,7 +105,8 @@ namespace tiles {
         const spritesOfKind = sprites.allOfKind(kind);
         const targetLoc = tiles.getTileLocation(col, row);
         for (const s of spritesOfKind) {
-            if (s.tilemapLocation().equals(targetLoc)) {
+            const loc = s.tilemapLocation();
+            if (loc.column === targetLoc.column && loc.row === targetLoc.row) {
                 return true;
             }
         }
