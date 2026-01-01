@@ -1,17 +1,40 @@
 //% color="#d48c26" weight=90 icon="\uf279"
 namespace tiles {
+    export class TilePoint {
+        col: number;
+        row: number;
+        constructor(col: number, row: number) {
+            this.col = col;
+            this.row = row;
+        }
+    }
+
+    /**
+     * Create a reusable tile point coordinate
+     */
+    //% block="tile point col $col row $row"
+    //% blockId=tiles_create_tile_point
+    //% group="Locations"
+    //% weight=100
+    export function createTilePoint(col: number, row: number): TilePoint {
+        return new TilePoint(col, row);
+    }
+
     // ---------------------------------------------------------------------
-    // Movement helpers (unchanged)
+    // Movement helpers
     // ---------------------------------------------------------------------
     /**
      * Move a sprite to a specific tile location at a given speed.
      * Straight‑line movement; no path‑finding.
      */
-    //% block="move $sprite to tile col $col row $row at speed $speed"
+    //% block="move $sprite to $pt at speed $speed"
     //% sprite.shadow=variables_get
     //% sprite.defl=mySprite
+    //% pt.shadow=tiles_create_tile_point
     //% group="Movement"
-    export function moveSpriteToTile(sprite: Sprite, col: number, row: number, speed: number) {
+    export function moveSpriteToTile(sprite: Sprite, pt: TilePoint, speed: number) {
+        const col = pt.col;
+        const row = pt.row;
         const tileSize = 16; // default tile size in Arcade
         const targetX = col * tileSize + tileSize / 2;
         const targetY = row * tileSize + tileSize / 2;
@@ -41,11 +64,14 @@ namespace tiles {
     /**
      * Teleport a sprite directly to a tile.
      */
-    //% block="teleport $sprite to tile col $col row $row"
+    //% block="teleport $sprite to $pt"
     //% sprite.shadow=variables_get
     //% sprite.defl=mySprite
+    //% pt.shadow=tiles_create_tile_point
     //% group="Movement"
-    export function teleportToTile(sprite: Sprite, col: number, row: number) {
+    export function teleportToTile(sprite: Sprite, pt: TilePoint) {
+        const col = pt.col;
+        const row = pt.row;
         const tileSize = 16;
         const x = col * tileSize + tileSize / 2;
         const y = row * tileSize + tileSize / 2;
@@ -53,14 +79,8 @@ namespace tiles {
     }
 
     // ---------------------------------------------------------------------
-    // Tile interaction API (highlight & press handling)
+    // Tile interaction API (highlight & press logic)
     // ---------------------------------------------------------------------
-    /**
-     * Handler type for a tile "press" (A button) when a sprite of the player kind
-     * is standing on the tile.
-     */
-    //% shim=functions
-    export type TilePressHandler = (loc: tiles.Location) => void;
 
     /**
      * Internal record for a highlighted tile.
@@ -74,21 +94,19 @@ namespace tiles {
 
     // Maps "col,row" -> HighlightRec
     const highlightMap: { [key: string]: HighlightRec } = {};
-    // Maps "col,row" -> press handler
-    const pressMap: { [key: string]: TilePressHandler } = {};
 
     /**
      * Register a tile to change its sprite when a sprite of the given kind touches it.
-     * The tile at (col,row) will show `highlight` while any sprite of that kind is on it,
-     * and revert to its original image when none are.
+     * The tile at the point will show `highlight` while any sprite of that kind is on it.
      */
-    //% block="highlight tile at col $col row $row when kind $kind touches it with $highlight"
-    //% col.min=0 col.max=15
-    //% row.min=0 row.max=15
+    //% block="highlight tile at $pt when kind $kind touches it with $highlight"
     //% kind.shadow=spritekind
     //% highlight.shadow=tileset_tile_picker
+    //% pt.shadow=tiles_create_tile_point
     //% group="Tile Interaction"
-    export function setTileHighlight(col: number, row: number, kind: number, highlight: Image) {
+    export function setTileHighlight(pt: TilePoint, kind: number, highlight: Image) {
+        const col = pt.col;
+        const row = pt.row;
         const key = `${col},${row}`;
         const loc = tiles.getTileLocation(col, row);
         const original = tiles.getTileImage(loc);
@@ -96,13 +114,15 @@ namespace tiles {
     }
 
     /**
-     * Check if any sprite of the given kind is currently on the tile at (col,row).
+     * Check if any sprite of the given kind is currently on the tile at the point.
      */
-    //% block="is kind $kind on tile col $col row $row"
-    //% col.min=0 col.max=15
-    //% row.min=0 row.max=15
+    //% block="is kind $kind on tile $pt"
+    //% kind.shadow=spritekind
+    //% pt.shadow=tiles_create_tile_point
     //% group="Tile Interaction"
-    export function isKindOnTile(kind: number, col: number, row: number): boolean {
+    export function isKindOnTile(kind: number, pt: TilePoint): boolean {
+        const col = pt.col;
+        const row = pt.row;
         const spritesOfKind = sprites.allOfKind(kind);
         const targetLoc = tiles.getTileLocation(col, row);
         for (const s of spritesOfKind) {
@@ -114,21 +134,8 @@ namespace tiles {
         return false;
     }
 
-    /**
-     * Register a handler that runs when the A button is pressed while the player
-     * (SpriteKind.Player) stands on the tile at (col,row).
-     */
-    //% block="when A pressed on tile col $col row $row"
-    //% col.min=0 col.max=15
-    //% row.min=0 row.max=15
-    //% group="Tile Interaction"
-    export function onTilePressed(col: number, row: number, handler: TilePressHandler) {
-        const key = `${col},${row}`;
-        pressMap[key] = handler;
-    }
-
     // ---------------------------------------------------------------------
-    // Internal update loop – handles highlights and A‑press detection
+    // Internal update loop
     // ---------------------------------------------------------------------
     let loopInstalled = false;
     function ensureLoop() {
@@ -141,7 +148,11 @@ namespace tiles {
                 const [cStr, rStr] = key.split(",");
                 const col = parseInt(cStr);
                 const row = parseInt(rStr);
-                const anyOnTile = isKindOnTile(rec.kind, col, row);
+
+                // Check using tmp point
+                const pt = new TilePoint(col, row);
+                const anyOnTile = isKindOnTile(rec.kind, pt);
+
                 const loc = tiles.getTileLocation(col, row);
                 if (anyOnTile && !rec.active) {
                     tiles.setTileAt(loc, rec.highlight);
@@ -151,15 +162,6 @@ namespace tiles {
                     rec.active = false;
                 }
             }
-        });
-        // A‑press handling – fires when A is pressed and player is on a tile
-        controller.A.onEvent(ControllerButtonEvent.Pressed, () => {
-            const players = sprites.allOfKind(SpriteKind.Player);
-            if (players.length === 0) return;
-            const playerLoc = players[0].tilemapLocation();
-            const key = `${playerLoc.column},${playerLoc.row}`;
-            const fn = pressMap[key];
-            if (fn) fn(playerLoc);
         });
     }
 
