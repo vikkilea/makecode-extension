@@ -187,12 +187,15 @@ namespace ui {
     //% color.defl=1
     //% group="HUD"
     export function addLive(icon: Image, observable: ObservableValue, corner: Corner, bgColor: number = 15, color: number = 1) {
+        if (!observable) {
+            return;
+        }
         const id = Math.randomRange(0, 999999).toString();
-        const item = new UIItem(id, icon, observable.value, corner, bgColor, color, observable);
+        const item = new UIItem(id, icon, observable.value + "", corner, bgColor, color, observable);
 
         // Auto-update
-        const handler = (v: string) => {
-            item.value = v;
+        const handler = (v: any) => {
+            item.value = v + "";
         };
         item.changeHandler = handler;
         observable.onChange.add(handler);
@@ -209,6 +212,9 @@ namespace ui {
     //% observable.shadow=variables_get
     //% group="HUD"
     export function bindToObservable(id: string, observable: ObservableValue) {
+        if (!observable) {
+            return;
+        }
         for (const item of items) {
             if (item.id === id) {
                 // Cleanup old subscription
@@ -218,10 +224,10 @@ namespace ui {
 
                 // Setup new subscription
                 item.observable = observable;
-                item.value = observable.value; // Sync immediately
+                item.value = observable.value + ""; // Sync immediately
 
-                const handler = (v: string) => {
-                    item.value = v;
+                const handler = (v: any) => {
+                    item.value = v + "";
                 };
                 item.changeHandler = handler;
                 observable.onChange.add(handler);
