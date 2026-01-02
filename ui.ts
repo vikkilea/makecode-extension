@@ -15,131 +15,78 @@ namespace ui {
         BottomRight = 3
     }
 
-    // ---------------------------------------------------------------------
-    // Observable values (Variable binding)
-    // ---------------------------------------------------------------------
-
-    export class ObservableValue {
-        private _value: any;
-        public onChange: events.Signal<any>;
-
-        constructor(initialValue: any) {
-            this._value = initialValue;
-            this.onChange = new events.Signal<any>();
+    /**
+     * Add a UI element that automatically updates when the observable value changes.
+     */
+    //% block="add live UI item $icon bound to $observable at $corner || bg $bgColor text $color"
+    //% icon.shadow=screen_image_picker
+    //% observable.shadow=variables_get
+    //% bgColor.shadow=colorindexpicker
+    //% bgColor.defl=15
+    //% color.shadow=colorindexpicker
+    //% color.defl=1
+    //% group="HUD"
+    export function addLive(icon: Image, observable: observables.ObservableValue, corner: Corner, bgColor: number = 15, color: number = 1) {
+        if (!observable) {
+            return;
         }
+        const id = Math.randomRange(0, 999999).toString();
+        const item = new UIItem(id, icon, observable.value + "", corner, bgColor, color, observable);
 
-        get value(): any {
-            return this._value;
+        // Auto-update
+        const handler = (v: any) => {
+            item.value = v + "";
+        };
+        item.changeHandler = handler;
+        observable.onChange.add(handler);
+
+        items.push(item);
+        startRenderLoop();
+    }
+
+    /**
+     * Bind an existing UI item to an observable value.
+     */
+    //% block="bind UI item $id to $observable"
+    //% id.shadow=variables_get
+    //% observable.shadow=variables_get
+    //% group="HUD"
+    export function bindToObservable(id: string, observable: observables.ObservableValue) {
+        if (!observable) {
+            return;
         }
-
-        set value(v: any) {
-            if (this._value !== v) {
-                this._value = v;
-                if (this.onChange.hasListeners()) {
-                    this.onChange.dispatch(v);
+        for (const item of items) {
+            if (item.id === id) {
+                // Cleanup old subscription
+                if (item.observable && item.changeHandler) {
+                    item.observable.onChange.remove(item.changeHandler);
                 }
+
+                // Setup new subscription
+                item.observable = observable;
+                item.value = observable.value + ""; // Sync immediately
+
+                const handler = (v: any) => {
+                    item.value = v + "";
+                };
+                item.changeHandler = handler;
+                observable.onChange.add(handler);
+                return;
             }
         }
-    }
-
-    /**
-     * Create a special variable that triggers code when it changes.
-     */
-    //% block="create observable string $initialValue"
-    //% blockId=ui_create_observable_string
-    //% group="Variables"
-    export function createObservableString(initialValue: string): ObservableValue {
-        return new ObservableValue(initialValue);
-    }
-
-    /**
-     * Create a special variable that triggers code when it changes.
-     */
-    //% block="create observable number $initialValue"
-    //% initialValue.defl=0
-    //% blockId=ui_create_observable_number
-    //% group="Variables"
-    export function createObservableNumber(initialValue: number): ObservableValue {
-        return new ObservableValue(initialValue);
-    }
-
-    /**
-     * Run code when an observable value changes.
-     */
-    //% block="on $observable change to $v"
-    //% observable.shadow=variables_get
-    //% draggableParameters="reporter"
-    //% group="Variables"
-    export function onObservableChange(observable: ObservableValue, handler: (v: any) => void) {
-        observable.onChange.add(handler);
-    }
-
-    /**
-     * Set the string value of an observable.
-     */
-    //% block="set $observable string value to $v"
-    //% observable.shadow=variables_get
-    //% v.defl=""
-    //% group="Variables"
-    export function setObservableString(observable: ObservableValue, v: string) {
-        observable.value = v;
-    }
-
-    /**
-     * Set the number value of an observable.
-     */
-    //% block="set $observable number value to $v"
-    //% observable.shadow=variables_get
-    //% v.defl=0
-    //% group="Variables"
-    export function setObservableNumber(observable: ObservableValue, v: number) {
-        observable.value = v;
-    }
-
-    /**
-     * Change the value of an observable number by an amount.
-     */
-    //% block="change $observable by $amount"
-    //% observable.shadow=variables_get
-    //% amount.defl=1
-    //% group="Variables"
-    export function changeObservableValueBy(observable: ObservableValue, amount: number) {
-        if (typeof observable.value === "number") {
-            observable.value = (observable.value as number) + amount;
-        }
-    }
-
-    /**
-     * Get the current value of an observable as a number.
-     */
-    //% block="get number value of $observable"
-    //% observable.shadow=variables_get
-    //% group="Variables"
-    export function getObservableNumber(observable: ObservableValue): number {
-        return parseFloat("" + observable.value);
-    }
-
-    /**
-     * Get the current value of an observable as a string.
-     */
-    //% block="get string value of $observable"
-    //% observable.shadow=variables_get
-    //% group="Variables"
-    export function getObservableString(observable: ObservableValue): string {
-        return "" + observable.value;
     }
 
     class UIItem {
         id: string;
         icon: Image;
         value: string;
-        observable?: ObservableValue;
+        observable?: observables.ObservableValue;
         changeHandler?: (v: any) => void;
         bgColor: number;
         corner: Corner;
         color: number;
 
-        constructor(id: string, icon: Image, value: string, corner: Corner, bgColor: number, color: number, observable?: ObservableValue) {
+        constructor(id: string, icon: Image, value: string, corner: Corner, bgColor: number, color: number, observable?: observables.ObservableValue) {
             this.id = id;
             this.icon = icon;
             this.value = value;
@@ -258,7 +205,7 @@ namespace ui {
         if (isRendering) return;
         isRendering = true;
 
-        scene.createRenderable(90, function (target: Image, camera: scene.Camera) {
+        game.onShade(function () {
             // Group indices to track offsets
             let tlX = 2;
             let trX = 158;
@@ -300,16 +247,14 @@ namespace ui {
 
                 // Draw Background
                 if (item.bgColor) {
-                    target.fillRect(x, y, totalWidth, height, item.bgColor);
-                    // Optional border? 
-                    // target.drawRect(x, y, totalWidth, height, item.color);
+                    screen.fillRect(x, y, totalWidth, height, item.bgColor);
                 }
 
                 // Draw Icon
-                target.drawTransparentImage(item.icon, x + padding, y + padding + (height - item.icon.height - padding * 2) / 2);
+                screen.drawTransparentImage(item.icon, x + padding, y + padding + (height - item.icon.height - padding * 2) / 2);
 
                 // Draw Text
-                target.print(item.value, x + item.icon.width + (padding * 2), y + padding + (height - font.charHeight - padding * 2) / 2 + 1, item.color, font);
+                screen.print(item.value, x + item.icon.width + (padding * 2), y + padding + (height - font.charHeight - padding * 2) / 2 + 1, item.color, font);
             }
         });
     }

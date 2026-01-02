@@ -8,6 +8,7 @@
         "tiles-custom.ts",
         "character-anim.ts",
         "events.ts",
+        "observables.ts",
         "ui.ts",
         "main.ts"
     ],
