@@ -210,12 +210,14 @@ namespace tiles {
     /**
      * Run code when a sprite of a specific kind enters a specific tile location.
      */
-    //% block="on sprite of kind $kind enters tile $location"
+    //% block="register sprite of kind $kind enter tile $location"
     //% kind.shadow=spritekind
     //% location.shadow=mapgettile
     //% draggableParameters="reporter"
     //% group="Tile Events"
+    //% weight=100
     export function onSpriteEnter(kind: number, location: tiles.Location, handler: (sprite: Sprite) => void) {
+        if (!location) return;
         const signals = getTileSignals(kind, location.column, location.row);
         signals.enter.add(handler);
         registerTrackedKind(kind);
@@ -225,12 +227,14 @@ namespace tiles {
     /**
      * Run code when a sprite of a specific kind leaves a specific tile location.
      */
-    //% block="on sprite of kind $kind exits tile $location"
+    //% block="register sprite of kind $kind exit tile $location"
     //% kind.shadow=spritekind
     //% location.shadow=mapgettile
     //% draggableParameters="reporter"
     //% group="Tile Events"
+    //% weight=99
     export function onSpriteExit(kind: number, location: tiles.Location, handler: (sprite: Sprite) => void) {
+        if (!location) return;
         const signals = getTileSignals(kind, location.column, location.row);
         signals.exit.add(handler);
         registerTrackedKind(kind);
