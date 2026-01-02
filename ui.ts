@@ -15,66 +15,9 @@ namespace ui {
         BottomRight = 3
     }
 
-    /**
-     * Add a UI element that automatically updates when the observable value changes.
-     */
-    //% block="add live UI item $icon bound to $observable at $corner || bg $bgColor text $color"
-    //% icon.shadow=screen_image_picker
-    //% observable.shadow=variables_get
-    //% bgColor.shadow=colorindexpicker
-    //% bgColor.defl=15
-    //% color.shadow=colorindexpicker
-    //% color.defl=1
-    //% group="HUD"
-    export function addLive(icon: Image, observable: observables.ObservableValue, corner: Corner, bgColor: number = 15, color: number = 1) {
-        if (!observable) {
-            return;
-        }
-        const id = Math.randomRange(0, 999999).toString();
-        const item = new UIItem(id, icon, observable.value + "", corner, bgColor, color, observable);
 
-        // Auto-update
-        const handler = (v: any) => {
-            item.value = v + "";
-        };
-        item.changeHandler = handler;
-        observable.onChange.add(handler);
 
-        items.push(item);
-        startRenderLoop();
-    }
 
-    /**
-     * Bind an existing UI item to an observable value.
-     */
-    //% block="bind UI item $id to $observable"
-    //% id.shadow=variables_get
-    //% observable.shadow=variables_get
-    //% group="HUD"
-    export function bindToObservable(id: string, observable: observables.ObservableValue) {
-        if (!observable) {
-            return;
-        }
-        for (const item of items) {
-            if (item.id === id) {
-                // Cleanup old subscription
-                if (item.observable && item.changeHandler) {
-                    item.observable.onChange.remove(item.changeHandler);
-                }
-
-                // Setup new subscription
-                item.observable = observable;
-                item.value = observable.value + ""; // Sync immediately
-
-                const handler = (v: any) => {
-                    item.value = v + "";
-                };
-                item.changeHandler = handler;
-                observable.onChange.add(handler);
-                return;
-            }
-        }
-    }
 
     class UIItem {
         id: string;
@@ -133,7 +76,7 @@ namespace ui {
     //% color.shadow=colorindexpicker
     //% color.defl=1
     //% group="HUD"
-    export function addLive(icon: Image, observable: ObservableValue, corner: Corner, bgColor: number = 15, color: number = 1) {
+    export function addLive(icon: Image, observable: observables.ObservableValue, corner: Corner, bgColor: number = 15, color: number = 1) {
         if (!observable) {
             return;
         }
@@ -158,7 +101,7 @@ namespace ui {
     //% id.shadow=variables_get
     //% observable.shadow=variables_get
     //% group="HUD"
-    export function bindToObservable(id: string, observable: ObservableValue) {
+    export function bindToObservable(id: string, observable: observables.ObservableValue) {
         if (!observable) {
             return;
         }
