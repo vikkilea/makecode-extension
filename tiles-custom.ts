@@ -1,4 +1,5 @@
 //% color="#d48c26" weight=90 icon="\uf279"
+//% block="Advanced Tiles"
 namespace tiles {
     // ---------------------------------------------------------------------
     // Movement helpers
@@ -216,7 +217,7 @@ namespace tiles {
     //% draggableParameters="reporter"
     //% group="Tile Events"
     //% weight=100
-    export function onSpriteEnter(kind: number, location: tiles.Location, handler: (sprite: Sprite) => void) {
+    export function registerOnSpriteEnter(kind: number, location: tiles.Location, handler: (sprite: Sprite) => void) {
         if (!location) return;
         const signals = getTileSignals(kind, location.column, location.row);
         signals.enter.add(handler);
@@ -233,7 +234,7 @@ namespace tiles {
     //% draggableParameters="reporter"
     //% group="Tile Events"
     //% weight=99
-    export function onSpriteExit(kind: number, location: tiles.Location, handler: (sprite: Sprite) => void) {
+    export function registerOnSpriteExit(kind: number, location: tiles.Location, handler: (sprite: Sprite) => void) {
         if (!location) return;
         const signals = getTileSignals(kind, location.column, location.row);
         signals.exit.add(handler);
